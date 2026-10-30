@@ -76,7 +76,7 @@ class IvasClient:
     def login(self):
         try:
             self.driver.get(f"{self.base_url}/portal/sms/received")
-            time.sleep(8)
+            time.sleep(3)
             soup = BeautifulSoup(self.driver.page_source, "html.parser")
             token_input = soup.find("input", {"name": "_token"})
             if token_input and token_input.get("value"):
@@ -204,7 +204,7 @@ class IvasClient:
     def get_live_page(self):
         try:
             self.driver.get(f"{self.base_url}/portal/live")
-            time.sleep(5)
+            time.sleep(2)
             return self.driver.page_source
         except Exception:
             return None

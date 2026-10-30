@@ -48,10 +48,60 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "IVAS OTP Bot ready.\n"
         f"Chat ID: {chat.id if chat else ''}\n"
-        "/numbers - list received SMS ranges\n"
+        "/countries - list available ranges/countries\n"
+        "/numbers <range> - list numbers in a range\n"
+        "/getnumber - get a random available number\n"
         "/otps - fetch recent OTPs\n"
         "/otp <phone> <range> - fetch OTP for a number\n"
         "/refresh - reload IVAS session"
+    )
+
+
+async def countries(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    c = get_client()
+    res = c.check_otps(from_date="")
+    if not res:
+        await update.message.reply_text("Failed to fetch data from IVAS.")
+        return
+    lines = ["Available ranges:"]
+    for d in res.get("sms_details", []):
+        lines.append(f"{d['country_number']} (count {d['count']})")
+    if len(lines) == 1:
+        lines.append("No ranges found.")
+    await update.message.reply_text("\n".join(lines))
+
+
+async def numbers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not context.args:
+        await update.message.reply_text("Usage: /numbers <range>")
+        return
+    rng = context.args[0]
+    c = get_client()
+    details = c.get_number_details(rng)
+    if not details:
+        await update.message.reply_text("No numbers found for that range.")
+        return
+    for num in details[:50]:
+        await update.message.reply_text(
+            f"📱 {num['phone_number']}\nRange: {num['range']}\nCount: {num['count']}"
+        )
+
+
+async def getnumber(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    c = get_client()
+    res = c.check_otps(from_date="")
+    if not res or not res.get("sms_details"):
+        await update.message.reply_text("No ranges found.")
+        return
+    import random
+    rng = random.choice(res["sms_details"])["country_number"]
+    details = c.get_number_details(rng)
+    if not details:
+        await update.message.reply_text("No numbers found.")
+        return
+    num = random.choice(details)
+    await update.message.reply_text(
+        f"📱 Your number:\n{num['phone_number']}\nRange: {num['range']}\n\nCopy and use it, then wait for OTP."
     )
 
 
@@ -139,7 +189,9 @@ def main():
     app = Application.builder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", start))
+    app.add_handler(CommandHandler("countries", countries))
     app.add_handler(CommandHandler("numbers", numbers))
+    app.add_handler(CommandHandler("getnumber", getnumber))
     app.add_handler(CommandHandler("otps", otps))
     app.add_handler(CommandHandler("otp", otp))
     app.add_handler(CommandHandler("refresh", refresh))

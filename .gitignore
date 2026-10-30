@@ -1,0 +1,8 @@
+.env
+cookies.json
+group_chat_id.txt
+__pycache__/
+*.pyc
+scratchpad/
+opencode/
+"
